@@ -49,16 +49,16 @@ sleep 10
 
 # Check health
 echo "🏥 Checking API health..."
-if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+if curl -f http://localhost:9000/health > /dev/null 2>&1; then
     echo "✅ Infrastructure Deployment API is healthy and running!"
     echo ""
     echo "🌐 API is available at:"
-    echo "   • API Base: http://localhost:8000"
-    echo "   • Health Check: http://localhost:8000/health"
-    echo "   • Deployments: http://localhost:8000/deployments"
+    echo "   • API Base: http://localhost:9000"
+    echo "   • Health Check: http://localhost:9000/health"
+    echo "   • Deployments: http://localhost:9000/deployments"
     echo ""
     echo "📖 Example usage:"
-    echo '   curl -X POST "http://localhost:8000/deploy" \'
+    echo '   curl -X POST "http://localhost:9000/deploy" \'
     echo '     -H "Content-Type: application/json" \'
     echo '     -d "{}"'
     echo ""
@@ -71,5 +71,5 @@ else
     echo "🔍 Troubleshooting steps:"
     echo "   1. Check container status: docker ps -a"
     echo "   2. Check logs: $DOCKER_COMPOSE -f docker-compose.infra-api.yml logs"
-    echo "   3. Try manual start: docker run -p 8000:8000 infra-deployment-api"
+    echo "   3. Try manual start: docker run -p 9000:9000 infra-deployment-api"
 fi

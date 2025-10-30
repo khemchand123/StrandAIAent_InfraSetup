@@ -19,7 +19,7 @@ docker build -t infra-deployment-api . --no-cache
 echo "🔄 Starting Infrastructure Deployment API..."
 docker run -d \
   --name infra-deployment-api \
-  -p 8000:8000 \
+  -p 9000:9000 \
   -v /var/run/docker.sock:/var/run/docker.sock \
   -v $(pwd):/app \
   --restart unless-stopped \
@@ -30,16 +30,16 @@ sleep 10
 
 # Check health
 echo "🏥 Checking API health..."
-if curl -f http://localhost:8000/health > /dev/null 2>&1; then
+if curl -f http://localhost:9000/health > /dev/null 2>&1; then
     echo "✅ Infrastructure Deployment API is healthy and running!"
     echo ""
     echo "🌐 API is available at:"
-    echo "   • API Base: http://localhost:8000"
-    echo "   • Health Check: http://localhost:8000/health"
-    echo "   • Deployments: http://localhost:8000/deployments"
+    echo "   • API Base: http://localhost:9000"
+    echo "   • Health Check: http://localhost:9000/health"
+    echo "   • Deployments: http://localhost:9000/deployments"
     echo ""
     echo "📖 Example usage:"
-    echo '   curl -X POST "http://localhost:8000/deploy" \'
+    echo '   curl -X POST "http://localhost:9000/deploy" \'
     echo '     -H "Content-Type: application/json" \'
     echo '     -d "{}"'
     echo ""
@@ -52,5 +52,5 @@ else
     echo "🔍 Troubleshooting steps:"
     echo "   1. Check container status: docker ps -a"
     echo "   2. Check logs: docker logs infra-deployment-api"
-    echo "   3. Check if port 8000 is available: netstat -tlnp | grep 8000"
+    echo "   3. Check if port 9000 is available: netstat -tlnp | grep 9000"
 fi
