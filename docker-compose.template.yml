@@ -1,0 +1,143 @@
+networks:
+  search_ai_agent_net_${INSTANCE_ID}:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.${SUBNET_OCTET}.0/24
+
+services:
+  elasticsearch-${INSTANCE_ID}:
+    image: elastic/elasticsearch:8.18.8
+    container_name: search_ai_elasticsearch_${INSTANCE_ID}
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=true
+      - xpack.security.authc.api_key.enabled=true
+      - ELASTIC_PASSWORD=changeme
+      - ES_JAVA_OPTS=-Xms1g -Xmx1g
+    networks:
+      - search_ai_agent_net_${INSTANCE_ID}
+    ports:
+      - "${ELASTICSEARCH_PORT}:9200"
+      - "${ELASTICSEARCH_TRANSPORT_PORT}:9300"
+    volumes:
+      - search_ai_elasticsearch_data_${INSTANCE_ID}:/usr/share/elasticsearch/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "curl -u elastic:changeme -f http://localhost:9200/_cluster/health || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 60s
+
+  elasticsearch-init-${INSTANCE_ID}:
+    image: curlimages/curl:latest
+    container_name: search_ai_elasticsearch_init_${INSTANCE_ID}
+    networks:
+      - search_ai_agent_net_${INSTANCE_ID}
+    depends_on:
+      elasticsearch-${INSTANCE_ID}:
+        condition: service_healthy
+    command: 
+      - sh
+      - -c
+      - |
+        echo 'Waiting for Elasticsearch to be ready...'
+        sleep 10
+        echo 'Creating API key for MCP server...'
+        response=$$(curl -s -u elastic:changeme -X POST 'http://elasticsearch-${INSTANCE_ID}:9200/_security/api_key' -H 'Content-Type: application/json' -d '{
+          "name": "mcp_full_access_key-${INSTANCE_ID}",
+          "role_descriptors": {
+            "mcp_full_role": {
+              "cluster": ["all"],
+              "index": [{
+                "names": ["*"],
+                "privileges": ["all"]
+              }]
+            }
+          }
+        }')
+        echo 'API Key Response:'
+        echo "$$response"
+        api_key=$$(echo "$$response" | grep -o '"api_key":"[^"]*"' | cut -d'"' -f4)
+        encoded_key=$$(echo "$$response" | grep -o '"encoded":"[^"]*"' | cut -d'"' -f4)
+        if [ -n "$$api_key" ] && [ -n "$$encoded_key" ]; then
+          echo "Generated API Key: $$api_key"
+          echo "Generated Encoded Key: $$encoded_key"
+          echo "$$api_key" > /tmp/api_key.txt
+          echo "$$encoded_key" > /tmp/encoded_key.txt
+        else
+          echo "ERROR: Failed to extract API key or encoded key from response"
+          echo "$$response"
+          exit 1
+        fi
+        echo 'API key generation completed'
+    restart: "no"
+    volumes:
+      - api_key_volume_${INSTANCE_ID}:/tmp
+
+  mcp-server-${INSTANCE_ID}:
+    image: khemchandrs/elastic-mcp-server:latest
+    container_name: search_ai_mcp_server_${INSTANCE_ID}
+    command: ["http"]
+    networks:
+      - search_ai_agent_net_${INSTANCE_ID}
+    dns:
+      - 8.8.8.8
+    ports:
+      - "${MCP_PORT}:8080"
+    environment:
+      ES_URL: http://elasticsearch-${INSTANCE_ID}:9200
+      ES_API_KEY: ${ES_API_KEY}
+    restart: unless-stopped
+    depends_on:
+      elasticsearch-${INSTANCE_ID}:
+        condition: service_healthy
+      elasticsearch-init-${INSTANCE_ID}:
+        condition: service_completed_successfully
+    volumes:
+      - api_key_volume_${INSTANCE_ID}:/tmp
+    healthcheck:
+      test: ["CMD", "sh", "-c", "netstat -ln | grep :8080"]
+      interval: 15s
+      timeout: 10s
+      retries: 5
+      start_period: 30s
+
+  doc-agent-api-${INSTANCE_ID}:
+    build: .
+    image: ai-strand-agent:latest
+    container_name: search_ai_agent_api_${INSTANCE_ID}
+    networks:
+      - search_ai_agent_net_${INSTANCE_ID}
+    dns:
+      - 8.8.8.8
+    ports:
+      - "${AI_AGENT_PORT}:5000"
+    environment:
+      - AWS_DEFAULT_REGION=us-east-1
+      - AWS_REGION=us-east-1
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY}
+      - MCP_URL=http://mcp-server-${INSTANCE_ID}:8080/mcp
+      - ES_ENCODED_KEY=${ES_ENCODED_KEY}
+    restart: unless-stopped
+    depends_on:
+      elasticsearch-${INSTANCE_ID}:
+        condition: service_healthy
+      mcp-server-${INSTANCE_ID}:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+volumes:
+  search_ai_elasticsearch_data_${INSTANCE_ID}:
+    driver: local
+  api_key_volume_${INSTANCE_ID}:
+    driver: local
