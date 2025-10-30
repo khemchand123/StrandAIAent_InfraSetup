@@ -28,8 +28,8 @@ COPY . ./
 # Create directory for compose files
 RUN mkdir -p /app/compose-files
 
-# Expose port 8000
-EXPOSE 8000
+# Expose port 9000
+EXPOSE 9000
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
@@ -37,7 +37,7 @@ ENV FLASK_ENV=production
 
 # Health check
 HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
+    CMD curl -f http://localhost:9000/health || exit 1
 
 # Run the infrastructure deployment API
 CMD ["python", "-u", "infra_deployment_api.py"]

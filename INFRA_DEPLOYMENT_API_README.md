@@ -23,7 +23,7 @@ This wrapper API allows you to dynamically deploy your Elasticsearch + MCP + AI 
    ```bash
    python infra_deployment_api.py
    ```
-   The API will start on `http://localhost:8000`
+   The API will start on `http://localhost:9000`
 
 ## API Endpoints
 
@@ -34,7 +34,7 @@ POST /deploy
 
 **With specific ports:**
 ```bash
-curl -X POST http://localhost:8000/deploy \
+curl -X POST http://localhost:9000/deploy \
   -H "Content-Type: application/json" \
   -d '{
     "ports": {
@@ -48,7 +48,7 @@ curl -X POST http://localhost:8000/deploy \
 
 **With auto-assigned ports:**
 ```bash
-curl -X POST http://localhost:8000/deploy
+curl -X POST http://localhost:9000/deploy
 ```
 
 **Response:**
@@ -103,7 +103,7 @@ GET /health
 import requests
 
 # Deploy with your reserved ports
-response = requests.post('http://localhost:8000/deploy', json={
+response = requests.post('http://localhost:9000/deploy', json={
     "ports": {
         "elasticsearch_port": 9200,
         "mcp_port": 8080,
@@ -124,7 +124,7 @@ print(f"AI Agent: {deployment['endpoints']['ai_agent']}")
 import requests
 
 # Let the system find available ports
-response = requests.post('http://localhost:8000/deploy')
+response = requests.post('http://localhost:9000/deploy')
 deployment = response.json()
 
 print(f"Auto-assigned ports:")
@@ -139,13 +139,13 @@ import requests
 import time
 
 # Check deployment status
-response = requests.get(f'http://localhost:8000/deployments/{instance_id}')
+response = requests.get(f'http://localhost:9000/deployments/{instance_id}')
 status = response.json()['status']
 
 # Wait for deployment to be ready
 while status == 'deploying':
     time.sleep(5)
-    response = requests.get(f'http://localhost:8000/deployments/{instance_id}')
+    response = requests.get(f'http://localhost:9000/deployments/{instance_id}')
     status = response.json()['status']
 
 print(f"Deployment status: {status}")
@@ -156,7 +156,7 @@ print(f"Deployment status: {status}")
 import requests
 
 # Stop the deployment
-response = requests.post(f'http://localhost:8000/deployments/{instance_id}/stop')
+response = requests.post(f'http://localhost:9000/deployments/{instance_id}/stop')
 print("Deployment stopped")
 ```
 

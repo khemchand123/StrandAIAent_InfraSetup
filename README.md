@@ -299,7 +299,7 @@ spec:
       - name: api
         image: elasticsearch-ai-agent:latest
         ports:
-        - containerPort: 8000
+        - containerPort: 9000
         env:
         - name: AWS_DEFAULT_REGION
           value: "us-east-1"
